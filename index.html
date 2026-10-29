@@ -72,14 +72,13 @@
     .waiting-note{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);color:var(--muted);font-size:10px;white-space:nowrap;opacity:0;transition:opacity .3s ease .6s;}
     .waiting-note.visible{opacity:1;}
     footer{position:absolute;left:0;right:0;bottom:0;z-index:40;height:94px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:14px var(--outer);border-top:1px solid var(--rule);background:var(--panel);backdrop-filter:blur(12px);}
-    .count{color:var(--muted);font-size:11px;line-height:1.5;}
-    .count strong{display:block;color:var(--ink);font-size:18px;font-weight:500;}
-    .switch-wrap{display:flex;align-items:center;gap:12px;}
-    .state-word{min-width:23px;color:var(--muted);font-size:11px;text-align:center;}
-    .state-word.active{color:var(--ink);font-weight:600;}
-    #toggle{position:relative;width:86px;height:42px;padding:0;border:1.4px solid var(--ink);border-radius:999px;background:var(--paper);cursor:pointer;}
-    #toggle::before{content:"";position:absolute;top:5px;left:5px;width:30px;height:30px;border:1.2px solid var(--ink);border-radius:50% 48% 51% 49%;background:var(--paper);transition:transform .45s cubic-bezier(.2,.75,.2,1),background .25s ease;filter:url(#roughen);}
-    #toggle[aria-checked="true"]::before{transform:translateX(44px) rotate(180deg);background:var(--ink);}
+    .count{display:flex;align-items:baseline;gap:10px;color:var(--ink);font-size:18px;line-height:1;}
+    .count strong{display:inline;color:var(--ink);font-size:18px;font-weight:500;}
+    .count-slash{color:var(--muted);font-size:15px;}
+    .switch-wrap{display:flex;align-items:center;gap:0;}
+    .state-button{min-width:58px;height:36px;padding:7px 13px;border:1px solid var(--ink);border-radius:999px;background:var(--paper);color:var(--muted);font-size:11px;line-height:1;cursor:pointer;transition:background .2s ease,color .2s ease;}
+    .state-button + .state-button{margin-left:6px;}
+    .state-button.active{background:var(--ink);color:white;}
     .actions{justify-self:end;display:flex;align-items:center;gap:8px;}
     .text-button{min-height:36px;padding:8px 12px;border:0;border-bottom:1px solid var(--ink);border-radius:0;background:transparent;color:var(--ink);font-size:11px;cursor:pointer;}
     .text-button:hover{background:var(--paper-soft);}
@@ -95,11 +94,10 @@
     .scrim{position:absolute;inset:0;z-index:90;background:rgba(255,255,255,.54);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .3s ease;}
     .scrim.visible{opacity:1;pointer-events:auto;}
     .empty-message{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--muted);font-size:12px;text-align:center;line-height:1.8;}
-    #historyInfo{margin-top:10px;color:var(--muted);font-size:11px;line-height:1.5;}
     @media (max-width:700px){
       #stage{inset:0 0 112px 0;}
       footer{height:112px;grid-template-columns:auto 1fr auto;gap:8px;padding-inline:16px;}
-      .switch-wrap{justify-content:center;gap:6px;} #toggle{width:68px;height:38px;} #toggle::before{width:26px;height:26px;} #toggle[aria-checked="true"]::before{transform:translateX(30px) rotate(180deg);}
+      .switch-wrap{justify-content:center;gap:0;} .state-button{min-width:52px;height:34px;padding-inline:11px;} .state-button + .state-button{margin-left:5px;}
       .text-button{padding-inline:7px;} #rematch{display:none !important;}
       .team-card{width:47vw;height:118px;}
       .person{min-width:72px;min-height:52px;padding:10px 13px;} .shape-diamond{min-width:78px;}
@@ -122,30 +120,27 @@
       <div id="emptyMessage" class="empty-message" hidden>참여자 명단을 입력해 주세요.</div>
     </section>
     <footer>
-      <div class="count">participants<strong id="participantCount">0</strong><span id="historyCount" style="display:block;margin-top:2px;color:#888;font-size:10px;"></span></div>
-      <div class="switch-wrap">
-        <span id="offWord" class="state-word active">off</span>
-        <button id="toggle" role="switch" aria-checked="false" aria-label="1대1 매칭 시작"></button>
-        <span id="onWord" class="state-word">on</span>
+      <div class="count" aria-label="전체 인원수와 매칭된 횟수">
+        <strong id="participantCount">0</strong><span class="count-slash">/</span><strong id="historyCount">0</strong>
+      </div>
+      <div class="switch-wrap" role="group" aria-label="matching state">
+        <button class="state-button active" id="offButton" aria-pressed="true">off</button>
+        <button class="state-button" id="onButton" aria-pressed="false">on</button>
       </div>
       <div class="actions">
-        <button class="text-button" id="rematch" hidden>다시 매칭</button>
-        <button class="text-button" id="editNames">명단 편집</button>
+        <button class="text-button" id="rematch" hidden>again</button>
+        <button class="text-button" id="editNames">member</button>
       </div>
     </footer>
     <div class="scrim" id="scrim"></div>
-    <aside class="drawer" id="drawer" aria-hidden="true" aria-label="참여자 명단 편집">
+    <aside class="drawer" id="drawer" aria-hidden="true" aria-label="participant">
       <div class="drawer-head">
-        <div>
-          <h2>참여자 명단</h2>
-          <p>한 줄에 한 명씩. 홀수면 대기. 이미 만난 조합은 자동으로 제외. 전원 다른 도형. 도형끼리 부딪히면 튕겨납니다.</p>
-          <div id="historyInfo"></div>
-        </div>
-        <button class="icon-button" id="closeDrawer" aria-label="닫기">×</button>
+        <div><h2>participant</h2></div>
+        <button class="icon-button" id="closeDrawer" aria-label="close">×</button>
       </div>
-      <textarea id="namesInput" spellcheck="false" aria-label="참여자 이름"></textarea>
-      <button class="apply-button" id="applyNames">명단 적용</button>
-      <button class="text-button" id="clearHistory" style="margin-top:10px;align-self:flex-start;">매칭 기록 초기화</button>
+      <textarea id="namesInput" spellcheck="false" aria-label="participant"></textarea>
+      <button class="apply-button" id="applyNames">complete</button>
+      <button class="text-button" id="clearHistory" style="margin-top:10px;align-self:flex-start;">reset</button>
     </aside>
   </main>
   <script>
@@ -154,10 +149,10 @@
       const stage = document.getElementById('stage');
       const floatingLayer = document.getElementById('floatingLayer');
       const teamLayer = document.getElementById('teamLayer');
-      const toggle = document.getElementById('toggle');
+      const offButton = document.getElementById('offButton');
+      const onButton = document.getElementById('onButton');
       const participantCount = document.getElementById('participantCount');
       const historyCount = document.getElementById('historyCount');
-      const historyInfo = document.getElementById('historyInfo');
       const rematch = document.getElementById('rematch');
       const editNames = document.getElementById('editNames');
       const drawer = document.getElementById('drawer');
@@ -168,8 +163,6 @@
       const clearHistory = document.getElementById('clearHistory');
       const emptyMessage = document.getElementById('emptyMessage');
       const app = document.getElementById('app');
-      const offWord = document.getElementById('offWord');
-      const onWord = document.getElementById('onWord');
       const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       const SHAPES = ['circle','capsule','square','blob','diamond','arch','leaf','pebble','wave','soft','bean','cloud','drop','tilt','slant','notch'];
@@ -189,8 +182,7 @@
 
       function updateHistoryUI(){
         const total = matchHistory.size;
-        if(historyCount) historyCount.textContent = total ? `${total}쌍 기록 · 중복 방지` : '기록 없음';
-        if(historyInfo) historyInfo.textContent = total ? `지금까지 ${total}쌍이 만났습니다. 같은 조합은 다시 만나지 않습니다.` : '아직 기록이 없습니다.';
+        if(historyCount) historyCount.textContent = String(total);
       }
 
       function createParticipant(name, shapeName, index){
@@ -418,17 +410,18 @@
       function updateModeUI(){
         const matched=mode==='matched';
         app.classList.toggle('is-matched',matched);
-        toggle.setAttribute('aria-checked', String(matched));
-        toggle.setAttribute('aria-label', matched?'자유 이동으로 돌아가기':'1대1 매칭 시작');
-        offWord.classList.toggle('active',!matched);
-        onWord.classList.toggle('active',matched);
+        offButton.classList.toggle('active',!matched);
+        onButton.classList.toggle('active',matched);
+        offButton.setAttribute('aria-pressed', String(!matched));
+        onButton.setAttribute('aria-pressed', String(matched));
         rematch.hidden=!matched;
       }
 
       function openEditor(){ drawer.classList.add('open'); scrim.classList.add('visible'); drawer.setAttribute('aria-hidden','false'); setTimeout(()=>namesInput.focus(),250); }
       function closeEditor(){ drawer.classList.remove('open'); scrim.classList.remove('visible'); drawer.setAttribute('aria-hidden','true'); editNames.focus(); }
 
-      toggle.addEventListener('click',()=>{ if(mode==='float') matchParticipants(); else releaseParticipants(); });
+      offButton.addEventListener('click',releaseParticipants);
+      onButton.addEventListener('click',matchParticipants);
       rematch.addEventListener('click',matchParticipants);
       editNames.addEventListener('click',openEditor);
       closeDrawer.addEventListener('click',closeEditor);
@@ -436,7 +429,7 @@
       applyNames.addEventListener('click',()=>{ const names=namesInput.value.split(/\n|,/); setNames(names); closeEditor(); });
       clearHistory.addEventListener('click',()=>{ if(confirm('매칭 기록을 모두 초기화할까요?')){ matchHistory.clear(); saveHistory(); } });
 
-      document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && drawer.classList.contains('open')) closeEditor(); if(e.code==='Space' && !drawer.classList.contains('open') && e.target===document.body){ e.preventDefault(); toggle.click(); } });
+      document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && drawer.classList.contains('open')) closeEditor(); if(e.code==='Space' && !drawer.classList.contains('open') && e.target===document.body){ e.preventDefault(); (mode==='float' ? onButton : offButton).click(); } });
       window.addEventListener('resize',()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(()=>{ participants.forEach(n=>constrainAndBounce(n)); },120); });
 
       setNames(DEFAULT_NAMES); updateHistoryUI(); requestAnimationFrame(animate);
