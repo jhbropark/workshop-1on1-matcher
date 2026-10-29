@@ -79,6 +79,8 @@
     .state-button{min-width:58px;height:36px;padding:7px 13px;border:1px solid var(--ink);border-radius:999px;background:var(--paper);color:var(--muted);font-size:11px;line-height:1;cursor:pointer;transition:background .2s ease,color .2s ease;}
     .state-button + .state-button{margin-left:6px;}
     .state-button.active{background:var(--ink);color:white;}
+    .count-reset{width:18px;height:18px;margin-left:1px;padding:0;border:1px solid var(--rule);border-radius:50%;background:var(--paper);color:var(--muted);font-size:12px;line-height:16px;cursor:pointer;}
+    .count-reset:hover{border-color:var(--ink);color:var(--ink);}
     .actions{justify-self:end;display:flex;align-items:center;gap:8px;}
     .text-button{min-height:36px;padding:8px 12px;border:0;border-bottom:1px solid var(--ink);border-radius:0;background:transparent;color:var(--ink);font-size:11px;cursor:pointer;}
     .text-button:hover{background:var(--paper-soft);}
@@ -121,11 +123,11 @@
     </section>
     <footer>
       <div class="count" aria-label="전체 인원수와 매칭된 횟수">
-        <strong id="participantCount">0</strong><span class="count-slash">/</span><strong id="historyCount">0</strong>
+        <strong id="participantCount">0</strong><span class="count-slash">/</span><strong id="matchPressCount">0</strong><button class="count-reset" id="resetMatchCount" aria-label="reset match count" title="reset">↺</button>
       </div>
       <div class="switch-wrap" role="group" aria-label="matching state">
-        <button class="state-button active" id="offButton" aria-pressed="true">off</button>
-        <button class="state-button" id="onButton" aria-pressed="false">on</button>
+        <button class="state-button active" id="offButton" aria-pressed="true">play</button>
+        <button class="state-button" id="onButton" aria-pressed="false">match</button>
       </div>
       <div class="actions">
         <button class="text-button" id="rematch" hidden>again</button>
@@ -152,7 +154,8 @@
       const offButton = document.getElementById('offButton');
       const onButton = document.getElementById('onButton');
       const participantCount = document.getElementById('participantCount');
-      const historyCount = document.getElementById('historyCount');
+      const matchPressCount = document.getElementById('matchPressCount');
+      const resetMatchCount = document.getElementById('resetMatchCount');
       const rematch = document.getElementById('rematch');
       const editNames = document.getElementById('editNames');
       const drawer = document.getElementById('drawer');
@@ -172,6 +175,8 @@
       let lastTime = performance.now();
       let resizeTimer = null;
       let matchHistory = new Set();
+      let matchPresses = 0;
+      try { const storedPresses = Number(localStorage.getItem('1on1-match-presses')); if(Number.isFinite(storedPresses) && storedPresses >= 0) matchPresses = storedPresses; } catch(e) {}
       try { const raw = localStorage.getItem('1on1-history'); if(raw){ const arr=JSON.parse(raw); if(Array.isArray(arr)) matchHistory=new Set(arr);} } catch(e){}
       const saveHistory = () => { try{ localStorage.setItem('1on1-history', JSON.stringify([...matchHistory])); }catch(e){} updateHistoryUI(); };
       const pairKey = (a,b) => [a,b].sort().join(' | ');
@@ -181,8 +186,19 @@
       const escapeHtml = (v) => v.replace(/[&<>'"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' })[c]);
 
       function updateHistoryUI(){
-        const total = matchHistory.size;
-        if(historyCount) historyCount.textContent = String(total);
+        if(matchPressCount) matchPressCount.textContent = String(matchPresses);
+      }
+
+      function recordMatchPress(){
+        matchPresses += 1;
+        try { localStorage.setItem('1on1-match-presses', String(matchPresses)); } catch(e) {}
+        updateHistoryUI();
+      }
+
+      function resetMatchPresses(){
+        matchPresses = 0;
+        try { localStorage.removeItem('1on1-match-presses'); } catch(e) {}
+        updateHistoryUI();
       }
 
       function createParticipant(name, shapeName, index){
@@ -421,7 +437,8 @@
       function closeEditor(){ drawer.classList.remove('open'); scrim.classList.remove('visible'); drawer.setAttribute('aria-hidden','true'); editNames.focus(); }
 
       offButton.addEventListener('click',releaseParticipants);
-      onButton.addEventListener('click',matchParticipants);
+      onButton.addEventListener('click',()=>{ recordMatchPress(); matchParticipants(); });
+      resetMatchCount.addEventListener('click',resetMatchPresses);
       rematch.addEventListener('click',matchParticipants);
       editNames.addEventListener('click',openEditor);
       closeDrawer.addEventListener('click',closeEditor);
