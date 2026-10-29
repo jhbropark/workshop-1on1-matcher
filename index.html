@@ -22,13 +22,8 @@
     button:focus-visible, textarea:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
     .app { position:relative; width:100%; height:100%; min-height:520px; isolation:isolate; background: linear-gradient(90deg, transparent 0 49.94%, rgba(0,0,0,.025) 49.94% 50.06%, transparent 50.06%), var(--paper); }
     .app::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.18; z-index:20; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
-    header { position:absolute; top:0; left:0; right:0; z-index:30; display:flex; align-items:flex-start; justify-content:space-between; padding:22px var(--outer) 16px; border-bottom:1px solid var(--soft-rule); background:linear-gradient(to bottom, rgba(255,255,255,.98), rgba(255,255,255,.84)); backdrop-filter:blur(8px); }
-    .identity h1 { margin:0; font-size:clamp(15px,1.6vw,20px); font-weight:500; letter-spacing:-.025em; }
-    .identity p { margin:6px 0 0; color:var(--muted); font-size:11px; line-height:1.4; }
-    .status { display:flex; align-items:center; gap:10px; padding-top:2px; color:var(--muted); font-size:11px; white-space:nowrap; }
-    .status-dot { width:8px; height:8px; border:1px solid var(--ink); border-radius:50%; background:var(--paper); transition:background .25s ease; }
-    .is-matched .status-dot { background:var(--ink); }
-    #stage { position:absolute; inset:76px 0 94px; overflow:hidden; }
+    header { display:none !important; }
+    #stage { position:absolute; inset:0 0 94px 0; overflow:hidden; }
     .guide-line { position:absolute; inset:28px var(--outer); border:1px solid var(--soft-rule); pointer-events:none; }
     .guide-line::before,.guide-line::after{content:"";position:absolute;background:var(--rule);}
     .guide-line::before{width:22px;height:1px;left:-1px;top:50%;}
@@ -102,7 +97,7 @@
     .empty-message{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--muted);font-size:12px;text-align:center;line-height:1.8;}
     #historyInfo{margin-top:10px;color:var(--muted);font-size:11px;line-height:1.5;}
     @media (max-width:700px){
-      header{padding-top:16px;} .identity p{display:none;} #stage{inset:60px 0 112px;}
+      #stage{inset:0 0 112px 0;}
       footer{height:112px;grid-template-columns:auto 1fr auto;gap:8px;padding-inline:16px;}
       .switch-wrap{justify-content:center;gap:6px;} #toggle{width:68px;height:38px;} #toggle::before{width:26px;height:26px;} #toggle[aria-checked="true"]::before{transform:translateX(30px) rotate(180deg);}
       .text-button{padding-inline:7px;} #rematch{display:none !important;}
@@ -120,16 +115,6 @@
     </filter>
   </svg>
   <main class="app" id="app">
-    <header>
-      <div class="identity">
-        <h1>workshop 1:1 matcher</h1>
-        <p>흩어진 이름이 만나 하나의 대화가 됩니다. · 중복 매칭 방지 · 전원 다른 도형</p>
-      </div>
-      <div class="status" aria-live="polite">
-        <span class="status-dot"></span>
-        <span id="statusText">자유롭게 이동 중</span>
-      </div>
-    </header>
     <section id="stage" aria-label="참여자 매칭 공간">
       <div class="guide-line" aria-hidden="true"></div>
       <div id="teamLayer" aria-hidden="true"></div>
@@ -153,7 +138,7 @@
       <div class="drawer-head">
         <div>
           <h2>참여자 명단</h2>
-          <p>한 줄에 한 명씩. 홀수면 대기. 이미 만난 조합은 자동으로 제외됩니다. 전원은 서로 다른 도형으로 표시됩니다.</p>
+          <p>한 줄에 한 명씩. 홀수면 대기. 이미 만난 조합은 자동으로 제외. 전원 다른 도형. 도형끼리 부딪히면 튕겨납니다.</p>
           <div id="historyInfo"></div>
         </div>
         <button class="icon-button" id="closeDrawer" aria-label="닫기">×</button>
@@ -170,7 +155,6 @@
       const floatingLayer = document.getElementById('floatingLayer');
       const teamLayer = document.getElementById('teamLayer');
       const toggle = document.getElementById('toggle');
-      const statusText = document.getElementById('statusText');
       const participantCount = document.getElementById('participantCount');
       const historyCount = document.getElementById('historyCount');
       const historyInfo = document.getElementById('historyInfo');
@@ -196,7 +180,6 @@
       let resizeTimer = null;
       let matchHistory = new Set();
       try { const raw = localStorage.getItem('1on1-history'); if(raw){ const arr=JSON.parse(raw); if(Array.isArray(arr)) matchHistory=new Set(arr);} } catch(e){}
-
       const saveHistory = () => { try{ localStorage.setItem('1on1-history', JSON.stringify([...matchHistory])); }catch(e){} updateHistoryUI(); };
       const pairKey = (a,b) => [a,b].sort().join(' | ');
       const random = (min,max) => Math.random()*(max-min)+min;
@@ -206,7 +189,7 @@
 
       function updateHistoryUI(){
         const total = matchHistory.size;
-        historyCount.textContent = total ? `${total}쌍 매칭 기록 · 중복 방지` : '기록 없음';
+        if(historyCount) historyCount.textContent = total ? `${total}쌍 기록 · 중복 방지` : '기록 없음';
         if(historyInfo) historyInfo.textContent = total ? `지금까지 ${total}쌍이 만났습니다. 같은 조합은 다시 만나지 않습니다.` : '아직 기록이 없습니다.';
       }
 
@@ -216,45 +199,130 @@
         el.innerHTML=`<span>${escapeHtml(name)}</span>`;
         floatingLayer.appendChild(el);
         const {width,height}=bounds();
-        const node={ id:`${Date.now()}-${index}-${Math.random()}`, name, el, shape:shapeName, x:random(50,Math.max(60,width-150)), y:random(45,Math.max(55,height-105)), vx:random(-44,44)||24, vy:random(-36,36)||-20, targetX:null,targetY:null, rotation:random(-6,6), targetRotation:0, phase:random(0,Math.PI*2), size:{width:100,height:64} };
+        const node={ id:`${Date.now()}-${index}-${Math.random()}`, name, el, shape:shapeName, x:random(40,Math.max(60,width-150)), y:random(30,Math.max(50,height-110)), vx:random(-46,46)||26, vy:random(-38,38)||-22, targetX:null,targetY:null, rotation:random(-6,6), targetRotation:0, phase:random(0,Math.PI*2), size:{width:100,height:64} };
         el.style.setProperty('--rotation',`${node.rotation}deg`);
-        requestAnimationFrame(()=>{ const r=el.getBoundingClientRect(); node.size.width=r.width; node.size.height=r.height; constrain(node); renderNode(node); });
+        requestAnimationFrame(()=>{ const r=el.getBoundingClientRect(); node.size.width=r.width; node.size.height=r.height; constrainAndBounce(node, true); renderNode(node); });
         return node;
       }
       function renderNode(node){ node.el.style.setProperty('--x',`${node.x}px`); node.el.style.setProperty('--y',`${node.y}px`); node.el.style.setProperty('--rotation',`${node.rotation}deg`); }
-      function constrain(node){ const {width,height}=bounds(); const pad=14; node.x=Math.max(pad,Math.min(width-node.size.width-pad,node.x)); node.y=Math.max(pad,Math.min(height-node.size.height-pad,node.y)); }
+
+      function constrainAndBounce(node, initial=false){
+        const {width,height}=bounds();
+        const pad=12;
+        let bounced=false;
+        if(node.x <= pad){
+          node.x = pad;
+          node.vx = Math.abs(node.vx) * (0.88 + Math.random()*0.35);
+          if(Math.abs(node.vx) < 12) node.vx += random(-6,6) || 8;
+          bounced=true;
+        }
+        if(node.x + node.size.width >= width - pad){
+          node.x = width - node.size.width - pad;
+          node.vx = -Math.abs(node.vx) * (0.88 + Math.random()*0.35);
+          if(Math.abs(node.vx) < 12) node.vx += random(-6,6) || -8;
+          bounced=true;
+        }
+        if(node.y <= pad){
+          node.y = pad;
+          node.vy = Math.abs(node.vy) * (0.88 + Math.random()*0.35);
+          if(Math.abs(node.vy) < 12) node.vy += random(-6,6) || 8;
+          bounced=true;
+        }
+        if(node.y + node.size.height >= height - pad){
+          node.y = height - node.size.height - pad;
+          node.vy = -Math.abs(node.vy) * (0.88 + Math.random()*0.35);
+          if(Math.abs(node.vy) < 12) node.vy += random(-6,6) || -8;
+          bounced=true;
+        }
+        if(bounced){
+          node.rotation += random(-2,2);
+          if(!initial){
+            node.vx += random(-2,2);
+            node.vy += random(-2,2);
+          }
+        }
+        // corner escape: if stuck near corner with low velocity
+        if((node.x <= pad+2 || node.x + node.size.width >= width - pad -2) && (node.y <= pad+2 || node.y + node.size.height >= height - pad -2)){
+          const speed = Math.hypot(node.vx, node.vy);
+          if(speed < 18){
+            node.vx += random(-14,14);
+            node.vy += random(-14,14);
+          }
+        }
+      }
+
+      function handleCollisions(){
+        for(let i=0;i<participants.length;i++){
+          for(let j=i+1;j<participants.length;j++){
+            const a=participants[i], b=participants[j];
+            const ax=a.x + a.size.width/2, ay=a.y + a.size.height/2;
+            const bx=b.x + b.size.width/2, by=b.y + b.size.height/2;
+            const dx=bx-ax, dy=by-ay;
+            const dist=Math.hypot(dx,dy);
+            const minDist=(a.size.width + a.size.height + b.size.width + b.size.height)/4 * 0.86;
+            if(dist < minDist && dist > 0.01){
+              const nx=dx/dist, ny=dy/dist;
+              const overlap=minDist - dist;
+              a.x -= nx * overlap * 0.52;
+              a.y -= ny * overlap * 0.52;
+              b.x += nx * overlap * 0.52;
+              b.y += ny * overlap * 0.52;
+              const rvx=b.vx - a.vx, rvy=b.vy - a.vy;
+              const velAlongNormal = rvx*nx + rvy*ny;
+              if(velAlongNormal < 0){
+                const restitution=0.92;
+                const impulse = -(1+restitution)*velAlongNormal / 2;
+                a.vx -= impulse * nx;
+                a.vy -= impulse * ny;
+                b.vx += impulse * nx;
+                b.vy += impulse * ny;
+              } else {
+                a.vx -= nx * 0.6;
+                a.vy -= ny * 0.6;
+                b.vx += nx * 0.6;
+                b.vy += ny * 0.6;
+              }
+              a.rotation += random(-1.2,1.2);
+              b.rotation += random(-1.2,1.2);
+              constrainAndBounce(a);
+              constrainAndBounce(b);
+            }
+          }
+        }
+      }
+
       function animate(time){
         const dt=Math.min((time-lastTime)/1000,0.035); lastTime=time; const {width,height}=bounds();
-        participants.forEach(node=>{
-          if(mode==='float'){
-            if(!prefersReducedMotion){
+        if(mode==='float'){
+          if(!prefersReducedMotion){
+            participants.forEach(node=>{
               const sway=Math.sin(time*0.0005+node.phase)*4.8;
               node.x+=(node.vx+sway)*dt;
               node.y+=(node.vy+Math.cos(time*0.00045+node.phase)*3.2)*dt;
               node.rotation=Math.sin(time*0.00022+node.phase)*4.5;
-              if(node.x<=12 || node.x+node.size.width>=width-12) node.vx*=-1;
-              if(node.y<=12 || node.y+node.size.height>=height-12) node.vy*=-1;
-              constrain(node);
-            }
-          } else if(node.targetX!==null){
-            const ease=1-Math.pow(0.0008,dt);
-            node.x+=(node.targetX-node.x)*ease;
-            node.y+=(node.targetY-node.y)*ease;
-            node.rotation+=(node.targetRotation-node.rotation)*ease;
+              constrainAndBounce(node);
+            });
+            // multiple passes for stable collision resolution
+            handleCollisions();
+            handleCollisions();
           }
-          renderNode(node);
-        });
+        } else {
+          participants.forEach(node=>{
+            if(node.targetX!==null){
+              const ease=1-Math.pow(0.0008,dt);
+              node.x+=(node.targetX-node.x)*ease;
+              node.y+=(node.targetY-node.y)*ease;
+              node.rotation+=(node.targetRotation-node.rotation)*ease;
+            }
+          });
+        }
+        participants.forEach(renderNode);
         requestAnimationFrame(animate);
       }
 
       function assignShapes(names){
-        if(names.length<=SHAPES.length){
-          const shuffled=shuffle(SHAPES);
-          return names.map((_,i)=>shuffled[i]);
-        } else {
-          const shuffled=shuffle(SHAPES);
-          return names.map((_,i)=>shuffled[i % shuffled.length]);
-        }
+        if(names.length<=SHAPES.length){ const shuffled=shuffle(SHAPES); return names.map((_,i)=>shuffled[i]); }
+        else { const shuffled=shuffle(SHAPES); return names.map((_,i)=>shuffled[i % shuffled.length]); }
       }
 
       function setNames(names){
@@ -277,10 +345,9 @@
       }
 
       function findTeams(participantNodes){
-        if(participantNodes.length<2) return [];
+        if(participantNodes.length<2) return {teams:[], score:0};
         let bestTeams=null; let bestScore=Infinity;
-        const totalAttempts=600;
-        for(let attempt=0; attempt<totalAttempts; attempt++){
+        for(let attempt=0; attempt<600; attempt++){
           const shuffled=shuffle(participantNodes);
           const teams=[];
           for(let i=0;i<Math.floor(shuffled.length/2);i++){ teams.push([shuffled[i*2], shuffled[i*2+1]]); }
@@ -292,26 +359,11 @@
 
       function matchParticipants(){
         if(participants.length<2) return;
+        const shuffledAll = shuffle(participants);
         const hasWaiting = participants.length %2 ===1;
-        const pool = hasWaiting ? participants.slice(0,-1) : participants.slice();
-        const shuffledPoolForWaiting = shuffle(participants);
-        const waitingNode = hasWaiting ? shuffledPoolForWaiting[shuffledPoolForWaiting.length-1] : null;
+        const waitingNode = hasWaiting ? shuffledAll[shuffledAll.length-1] : null;
         const pairingPool = hasWaiting ? participants.filter(p=>p!==waitingNode) : participants;
-
         const {teams, score} = findTeams(pairingPool);
-        const totalPossible = pairingPool.length*(pairingPool.length-1)/2;
-        if(matchHistory.size>=totalPossible && totalPossible>0){
-          statusText.textContent='모든 조합 소진 · 기록 초기화 가능';
-        }
-
-        if(score>0 && matchHistory.size>0){
-          if(score===teams.length){
-            // no zero-conflict pairing found
-            statusText.textContent = `새로운 조합 없음 (${matchHistory.size}쌍 기록) · 기록 초기화 후 다시 시도`;
-            // still proceed with best but warn?
-            // Optionally block: return without pairing? We'll still show best but with warning.
-          }
-        }
 
         mode='matched'; teamLayer.innerHTML='';
         participants.forEach(p=>{ p.el.classList.remove('matched-a','matched-b','waiting'); p.targetX=null; p.targetY=null; });
@@ -345,7 +397,6 @@
 
         saveHistory();
         updateModeUI();
-        if(score===0) statusText.textContent=`${teamCount}개 팀 매칭 완료 · 중복 없음`;
       }
 
       function releaseParticipants(){
@@ -366,7 +417,6 @@
         app.classList.toggle('is-matched',matched);
         toggle.setAttribute('aria-checked', String(matched));
         toggle.setAttribute('aria-label', matched?'자유 이동으로 돌아가기':'1대1 매칭 시작');
-        if(!matched) statusText.textContent='자유롭게 이동 중 (2배 속도)';
         offWord.classList.toggle('active',!matched);
         onWord.classList.toggle('active',matched);
         rematch.hidden=!matched;
@@ -381,10 +431,10 @@
       closeDrawer.addEventListener('click',closeEditor);
       scrim.addEventListener('click',closeEditor);
       applyNames.addEventListener('click',()=>{ const names=namesInput.value.split(/\n|,/); setNames(names); closeEditor(); });
-      clearHistory.addEventListener('click',()=>{ if(confirm('매칭 기록을 모두 초기화할까요?')){ matchHistory.clear(); saveHistory(); statusText.textContent='기록 초기화됨'; } });
+      clearHistory.addEventListener('click',()=>{ if(confirm('매칭 기록을 모두 초기화할까요?')){ matchHistory.clear(); saveHistory(); } });
 
       document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && drawer.classList.contains('open')) closeEditor(); if(e.code==='Space' && !drawer.classList.contains('open') && e.target===document.body){ e.preventDefault(); toggle.click(); } });
-      window.addEventListener('resize',()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(()=>{ participants.forEach(constrain); if(mode==='matched') {/* keep positions */} },120); });
+      window.addEventListener('resize',()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(()=>{ participants.forEach(n=>constrainAndBounce(n)); },120); });
 
       setNames(DEFAULT_NAMES); updateHistoryUI(); requestAnimationFrame(animate);
     })();
