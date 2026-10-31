@@ -68,6 +68,16 @@
     .team-card.visible{opacity:1;}
     .team-card::before{content:"";position:absolute;inset:10px 6px 6px;border:1px solid var(--rule);border-radius:50% 46% 52% 48% / 48% 53% 47% 52%;transform:rotate(var(--team-tilt,-1deg));filter:url(#roughen);}
     .team-walker{position:absolute;left:50%;top:50%;width:70px;height:auto;transform:translate(-50%,-50%);opacity:.86;mix-blend-mode:multiply;}
+    .topic-panel{position:absolute;left:50%;top:38px;z-index:30;width:min(900px,calc(100vw - 48px));transform:translateX(-50%);display:grid;gap:12px;text-align:center;pointer-events:none;opacity:0;transition:opacity .32s ease;}
+    .topic-panel.visible{opacity:1;}
+    .topic-panel[hidden]{display:none;}
+    .topic-main,.topic-sub{background:rgba(255,255,255,.86);backdrop-filter:blur(8px);}
+    .topic-main{padding:10px 18px 12px;border-bottom:1px solid var(--ink);}
+    .topic-main-label,.topic-sub-label{color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase;}
+    .topic-main h2{margin:4px 0 0;font-size:clamp(18px,2.3vw,28px);font-weight:500;letter-spacing:-.04em;}
+    .topic-sub{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:9px 14px;border-bottom:1px solid var(--soft-rule);text-align:left;}
+    .topic-sub p{margin:0;font-size:clamp(12px,1.25vw,15px);line-height:1.55;letter-spacing:-.025em;}
+    @media (max-width:700px){.topic-panel{top:20px;width:calc(100vw - 28px);gap:7px;}.topic-main{padding:8px 12px 9px;}.topic-main h2{font-size:19px;}.topic-sub{grid-template-columns:58px 1fr;gap:8px;padding:7px 9px;}.topic-sub p{font-size:11px;line-height:1.45;}}
     .waiting-note{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);color:var(--muted);font-size:10px;white-space:nowrap;opacity:0;transition:opacity .3s ease .6s;}
     .waiting-note.visible{opacity:1;}
     footer{position:absolute;left:0;right:0;bottom:0;z-index:40;height:94px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:14px var(--outer);border-top:1px solid var(--rule);background:var(--panel);backdrop-filter:blur(12px);}
@@ -116,6 +126,11 @@
   <main class="app" id="app">
     <section id="stage" aria-label="참여자 매칭 공간">
       <div class="guide-line" aria-hidden="true"></div>
+      <div id="topicPanel" class="topic-panel" aria-live="polite" hidden>
+        <div class="topic-main"><div class="topic-main-label">인터뷰 주제</div><h2 id="topicTitle"></h2></div>
+        <div class="topic-sub"><div class="topic-sub-label">질문 01</div><p id="topicQuestion1"></p></div>
+        <div class="topic-sub"><div class="topic-sub-label">질문 02</div><p id="topicQuestion2"></p></div>
+      </div>
       <div id="teamLayer" aria-hidden="true"></div>
       <div id="floatingLayer"></div>
       <div id="emptyMessage" class="empty-message" hidden>참여자 명단을 입력해 주세요.</div>
@@ -166,8 +181,27 @@
       const emptyMessage = document.getElementById('emptyMessage');
       const app = document.getElementById('app');
       const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const topicPanel = document.getElementById('topicPanel');
+      const topicTitle = document.getElementById('topicTitle');
+      const topicQuestion1 = document.getElementById('topicQuestion1');
+      const topicQuestion2 = document.getElementById('topicQuestion2');
 
       const SHAPES = ['circle','capsule','square','blob','diamond','arch','leaf','pebble','wave','soft','bean','cloud','drop','tilt','slant','notch'];
+
+      const INTERVIEW_TOPICS = [
+        {id:1,title:"나를 사로잡는 것",q1:"최근 나를 오래 머물게 하거나 다시 보게 만든 영상·전시·게임·음악은 무엇인가요?",q2:"어떤 장면이나 표현이 특히 좋았나요? 그때 어떤 감정을 느꼈나요?"},
+        {id:2,title:"이 분야를 선택한 이유",q1:"미디어아트·영상·그래픽 분야를 직접 배워보고 싶다고 생각한 계기는 무엇인가요?",q2:"관심을 갖는 데서 그치지 않고, 실제로 시작하게 만든 순간이 있었나요?"},
+        {id:3,title:"시간을 잊었던 순간",q1:"시간 가는 줄 모르고 무언가에 몰입했던 경험은 무엇인가요?",q2:"그 과정에서 무엇이 그렇게 재미있었나요? 작품 제작 경험이 아니어도 좋아요."},
+        {id:4,title:"작지만 확실한 자부심",q1:"지금까지 해본 일 중 ‘이건 내가 생각해도 잘했다’ 싶은 경험은 무엇인가요?",q2:"그 결과를 만드는 데 내가 했던 행동이나 선택은 무엇이었나요?"},
+        {id:5,title:"나의 필살기",q1:"지금 내가 가진 능력 중, 함께 작업하는 사람에게 도움이 될 만한 강점은 무엇인가요?",q2:"관찰력, 아이디어, 끈기, 정리, 손재주, 소통 등에서 떠오르는 구체적인 사례가 있나요?"},
+        {id:6,title:"나를 닮은 장면",q1:"나를 하나의 장면으로 표현한다면 어떤 색, 소리, 공간, 움직임이 떠오르나요?",q2:"그 장면이 나와 닮았다고 생각하는 이유는 무엇인가요?"},
+        {id:7,title:"계속하게 하는 힘",q1:"결과가 마음에 들지 않거나 배우는 과정이 어려워질 때, 나를 다시 움직이게 하는 것은 무엇인가요?",q2:"성취감, 호기심, 동료, 인정, 목표 중 무엇이 나에게 특히 중요한가요?"},
+        {id:8,title:"함께 일하는 방법",q1:"다른 사람과 함께 작업할 때, 어떤 방식으로 의견을 주고받는 것이 편한가요?",q2:"피드백을 받을 때 도움이 되는 말이나 방식은 무엇인가요? 반대로 내가 상대에게 해줄 수 있는 도움은요?"},
+        {id:9,title:"꼭 만들어보고 싶은 작업",q1:"지금의 실력이나 예산에 대한 걱정을 잠시 내려놓는다면, 꼭 만들어보고 싶은 작품이나 프로젝트는 무엇인가요?",q2:"어떤 공간에서, 누구에게 보여주고 싶나요? 가장 먼저 떠오르는 장면을 설명해주세요."},
+        {id:10,title:"관객에게 남기고 싶은 것",q1:"내 작업을 경험한 사람이 어떤 감정이나 생각을 가지고 돌아갔으면 좋겠나요?",q2:"그 사람이 친구에게 내 작업을 한 문장으로 소개한다면, 어떤 말을 듣고 싶나요?"},
+        {id:11,title:"미래의 나와 오늘의 시작",q1:"3년 뒤, 어떤 작업을 하는 사람으로 소개되고 싶나요?",q2:"그 모습을 향해 이번 수업에서 꼭 얻고 싶은 능력이나 완성하고 싶은 결과물은 무엇인가요?"},
+        {id:12,title:"나를 한 문장으로",q1:"지금까지 나눈 이야기를 바탕으로, 나를 한 문장으로 표현한다면 어떻게 말할 수 있을까요?",q2:"상대방이 발견한 나의 모습과 내가 생각한 나의 모습은 어떤 점이 같거나 다른가요?"}
+      ];
 
       let participants = [];
       let mode = 'float';
@@ -175,6 +209,8 @@
       let resizeTimer = null;
       let matchHistory = new Set();
       let matchPresses = 0;
+      let usedInterviewTopics = [];
+      try { const storedTopics = JSON.parse(localStorage.getItem('1on1-interview-topics-v1') || '[]'); if(Array.isArray(storedTopics)) usedInterviewTopics = storedTopics.filter(id=>INTERVIEW_TOPICS.some(topic=>topic.id===id)); } catch(e) {}
       try { const storedPresses = Number(localStorage.getItem('1on1-match-presses')); if(Number.isFinite(storedPresses) && storedPresses >= 0) matchPresses = storedPresses; } catch(e) {}
       try { const raw = localStorage.getItem('1on1-history'); if(raw){ const arr=JSON.parse(raw); if(Array.isArray(arr)) matchHistory=new Set(arr);} } catch(e){}
       const saveHistory = () => { try{ localStorage.setItem('1on1-history', JSON.stringify([...matchHistory])); }catch(e){} updateHistoryUI(); };
@@ -198,6 +234,29 @@
         matchPresses = 0;
         try { localStorage.removeItem('1on1-match-presses'); } catch(e) {}
         updateHistoryUI();
+      }
+
+
+      function nextInterviewTopic(){
+        let available = INTERVIEW_TOPICS.filter(topic=>!usedInterviewTopics.includes(topic.id));
+        if(!available.length){ usedInterviewTopics=[]; available=[...INTERVIEW_TOPICS]; }
+        const selected = available[Math.floor(Math.random()*available.length)];
+        usedInterviewTopics.push(selected.id);
+        try { localStorage.setItem('1on1-interview-topics-v1', JSON.stringify(usedInterviewTopics)); } catch(e) {}
+        return selected;
+      }
+
+      function showInterviewTopic(topic){
+        topicTitle.textContent=topic.title;
+        topicQuestion1.textContent=topic.q1;
+        topicQuestion2.textContent=topic.q2;
+        topicPanel.hidden=false;
+        requestAnimationFrame(()=>topicPanel.classList.add('visible'));
+      }
+
+      function hideInterviewTopic(){
+        topicPanel.classList.remove('visible');
+        topicPanel.hidden=true;
       }
 
       function createParticipant(name, shapeName, index){
@@ -336,6 +395,7 @@
       }
 
       function setNames(names){
+        hideInterviewTopic();
         floatingLayer.innerHTML=''; teamLayer.innerHTML=''; participants=[]; mode='float'; updateModeUI();
         const clean=names.map(v=>v.trim()).filter(Boolean).slice(0,40);
         const shapeAssign=assignShapes(clean);
@@ -347,10 +407,10 @@
       }
 
       function getTeamCenters(teamCount, hasWaiting){
-        const {width,height}=bounds(); const bottomReserve=hasWaiting?92:34; const usableH=Math.max(160,height-bottomReserve);
+        const {width,height}=bounds(); const bottomReserve=hasWaiting?92:34; const topReserve=mode==='matched'?(width<700?220:200):0; const usableH=Math.max(160,height-bottomReserve-topReserve);
         const minCardW=width<650?170:250; const cols=Math.max(1,Math.min(4,Math.floor(width/minCardW),teamCount)); const rows=Math.ceil(teamCount/cols);
         const cellW=width/cols; const cellH=usableH/rows; const centers=[];
-        for(let i=0;i<teamCount;i++){ const col=i%cols; const row=Math.floor(i/cols); centers.push({x:cellW*col+cellW/2, y:cellH*row+cellH/2+6, cellW, cellH}); }
+        for(let i=0;i<teamCount;i++){ const col=i%cols; const row=Math.floor(i/cols); centers.push({x:cellW*col+cellW/2, y:topReserve+cellH*row+cellH/2+6, cellW, cellH}); }
         return centers;
       }
 
@@ -369,6 +429,7 @@
 
       function matchParticipants(){
         if(participants.length<2) return;
+        showInterviewTopic(nextInterviewTopic());
         const shuffledAll = shuffle(participants);
         const hasWaiting = participants.length %2 ===1;
         const waitingNode = hasWaiting ? shuffledAll[shuffledAll.length-1] : null;
@@ -410,6 +471,7 @@
       }
 
       function releaseParticipants(){
+        hideInterviewTopic();
         mode='float'; teamLayer.innerHTML='';
         const {width,height}=bounds();
         participants.forEach(node=>{
